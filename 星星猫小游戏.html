@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>⭐ 星星猫 · 收集星星</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html,body{
+  width:100%;height:100%;overflow:hidden;
+  background:#1a1a2e;
+  font-family:'PingFang SC','Microsoft YaHei',sans-serif;
+}
+canvas{
+  display:block;position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+}
+/* 分享遮罩 */
+#shareOverlay{
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.7);z-index:100;
+  justify-content:center;align-items:center;
+}
+#shareOverlay.show{display:flex}
+#shareBox{
+  background:linear-gradient(135deg,#fff5f5,#fff0f6);
+  border-radius:24px;padding:30px 24px;text-align:center;
+  max-width:320px;width:90%;position:relative;
+  box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  animation:popIn .4s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes popIn{
+  0%{transform:scale(0.5);opacity:0}
+  100%{transform:scale(1);opacity:1}
+}
+#shareBox .icon{font-size:48px;margin-bottom:12px}
+#shareBox h3{font-size:20px;color:#333;margin-bottom:8px}
+#shareBox p{font-size:14px;color:#888;line-height:1.6;margin-bottom:20px}
+#shareBox .arrow-box{
+  position:relative;margin:10px 0 20px;
+  background:#fff;border-radius:16px;padding:16px;
+  border:2px dashed #ffd43b;
+}
+#shareBox .arrow-box .arrow{
+  display:block;font-size:40px;margin-bottom:4px;
+  animation:bounce .8s ease-in-out infinite alternate;
+}
+@keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-10px)}}
+#shareBox .btn-close{
+  display:inline-block;padding:10px 36px;
+  background:linear-gradient(135deg,#ff6b6b,#ffa94d);
+  color:#fff;border:none;border-radius:30px;
+  font-size:16px;font-weight:bold;cursor:pointer;
+  box-shadow:0 4px 15px rgba(255,107,107,0.4);
+  transition:transform .2s;
+}
+#shareBox .btn-close:active{transform:scale(0.95)}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<div id="shareOverlay">
+  <div id="shareBox">
+    <div class="icon">🥰</div>
+    <h3>分享给好朋友</h3>
+    <p>让更多小伙伴一起来玩吧！</p>
+    <div class="arrow-box">
+      <span class="arrow">☝️</span>
+      <div style="font-size:15px;color:#555;font-weight:bold;">
+        点击右上角 <span style="display:inline-block;background:#eee;padding:2px 10px;border-radius:6px;font-size:18px;">⋯</span><br>
+        选择「<b>发送给朋友</b>」
+      </div>
+    </div>
+    <button class="btn-close" onclick="closeShare()">知道啦 ✨</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ⭐ 星星猫 · 完整游戏
+// ============================================================
+
+// ---------- 微信分享 ----------
+function closeShare(){
+  document.getElementById('shareOverlay').classList.remove('show');
+}
+function showShare(){
+  document.getElementById('shareOverlay').classList.add('show');
+}
+// 尝试配置微信JS-SDK（需后端提供签名，默认跳过）
+function setupWechatShare(){
+  // 如果页面是通过微信打开的且SDK已加载
+  if(typeof wx !== 'undefined' && window.__wxjs_environment === 'miniprogram'){
+    // 在微信小程序中
+  }else if(typeof wx !== 'undefined'){
+    // 微信JS-SDK已加载，但需要后端签名
+    // 有配置时取消注释下方代码并填写配置
+    // wx.config({
+    //   debug:false,
+    //   appId:'your_app_id',
+    //   timestamp:'your_timestamp',
+    //   nonceStr:'your_nonce',
+    //   signature:'your_signature',
+    //   jsApiList:['updateAppMessageShareData','updateTimelineShareData']
+    // });
+    // wx.ready(function(){
+    //   wx.updateAppMessageShareData({
+    //     title:'⭐ 星星猫 · 超可爱接物小游戏',
+    //     desc:'和小猫咪一起收集星星吧 ✨',
+    //     link:location.href,
+    //     imgUrl:location.origin+'/share-icon.jpg',
+    //     success:function(){}
+    //   });
+    //   wx.updateTimelineShareData({
+    //     title:'⭐ 星星猫 · 超可爱接物小游戏',
+    //     link:location.href,
+    //     imgUrl:location.origin+'/share-icon.jpg',
+    //     success:function(){}
+    //   });
+    // });
+  }
+}
+
+// ---------- Canvas 设置 ----------
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+
+// 逻辑设计尺寸
+const DESIGN_W=420;
+const DESIGN_H=750;
+
+let scale=1;
+function resizeCanvas(){
+  const sw=window.innerWidth;
+  const sh=window.innerHeight;
+  // 按比例缩放
+  const scaleX=sw/DESIGN_W;
+  const scaleY=sh/DESIGN_H;
+  scale=Math.min(scaleX,scaleY);
+  canvas.width=DESIGN_W;
+  canvas.height=DESIGN_H;
+  canvas.style.width=(DESIGN_W*scale)+'px';
+  canvas.style.height=(DESIGN_H*scale)+'px';
+}
+resizeCanvas();
+window.addEventListener('resize',resizeCanvas);
+
+// ---------- 工具函数 ----------
+function rand(min,max){return Math.random()*(max-min)+min}
+function randInt(min,max){return Math.floor(rand(min,max+1))}
+function lerp(a,b,t){return a+(b-a)*t}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function dist(x1,y1,x2,y2){return Math.hypot(x2-x1,y2-y1)}
+
+// ---------- 音效（Web Audio） ----------
+let audioCtx=null;
+function initAudio(){
+  if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+}
+function playSound(type){
+  try{
+    initAudio();
+    const osc=audioCtx.createOscillator();
+    const gain=audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    gain.gain.value=0.15;
+    if(type==='collect'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(880,audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1320,audioCtx.currentTime+0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.15);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime+0.15);
+    }else if(type==='bonus'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(660,audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1320,audioCtx.currentTime+0.1);
+      osc.frequency.exponentialRampToValueAtTime(1760,audioCtx.currentTime+0.2);
+      gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime+0.3);
+    }else if(type==='hurt'){
+      osc.type='sawtooth';
+      osc.frequency.setValueAtTime(200,audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(80,audioCtx.currentTime+0.3);
+      gain.gain.value=0.1;
+      gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.3);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime+0.3);
+    }else if(type==='gameover'){
+      // 简单旋律
+      [523,440,349,262].forEach((freq,i)=>{
+        const o2=audioCtx.createOscillator();
+        const g2=audioCtx.createGain();
+        o2.connect(g2);g2.connect(audioCtx.destination);
+        o2.type='sine';
+        o2.frequency.value=freq;
+        g2.gain.setValueAtTime(0.12,audioCtx.currentTime+i*0.2);
+        g2.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+i*0.2+0.2);
+        o2.start(audioCtx.currentTime+i*0.2);
+        o2.stop(audioCtx.currentTime+i*0.2+0.2);
+      });
+    }else if(type==='start'){
+      osc.type='sine';
+      osc.frequency.setValueAtTime(523,audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(784,audioCtx.currentTime+0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.2);
+      osc.start(audioCtx.currentTime);
+      osc.stop(audioCtx.currentTime+0.2);
+    }
+  }catch(e){/* 静默处理 */}
+}
+
+// ---------- 游戏状态 ----------
+const G={};
+function resetGame(){
+  G.state='menu'; // menu | playing | paused | over
+  G.score=0;
+  G.lives=3;
+  G.maxLives=3;
+  G.speed=1.8;
+  G.spawnTimer=0;
+  G.spawnInterval=60; // frames
+  G.frame=0;
+  G.combo=0;
+  G.difficulty=1;
+  G.items=[];
+  G.particles=[];
+  G.floats=[];
+  G.bgStars=[];
+  G.bgClouds=[];
+
+  // 猫咪
+  G.cat={
+    x:DESIGN_W/2,
+    y:DESIGN_H-90,
+    w:70,
+    h:60,
+    targetX:DESIGN_W/2,
+    speed:6,
+    expression:'happy', // happy | hurt | excited
+    exprTimer:0,
+    squash:0, // 压扁动画
+  };
+
+  // 生成背景星星
+  for(let i=0;i<50;i++){
+    G.bgStars.push({
+      x:rand(0,DESIGN_W),
+      y:rand(0,DESIGN_H),
+      r:rand(0.5,2.5),
+      a:rand(0.3,1),
+      speed:rand(0.002,0.008),
+      phase:rand(0,Math.PI*2),
+    });
+  }
+  // 背景云
+  for(let i=0;i<4;i++){
+    G.bgClouds.push({
+      x:rand(0,DESIGN_W),
+      y:rand(30,DESIGN_H*0.6),
+      w:rand(60,140),
+      speed:rand(0.15,0.35),
+      a:rand(0.08,0.18),
+    });
+  }
+}
+
+// ---------- 物品模板 ----------
+const ITEM_TYPES={
+  star:{
+    emoji:'⭐',label:'星星',points:1,color:'#ffd700',
+    weight:45,size:28,
+  },
+  candy:{
+    emoji:'🍬',label:'糖果',points:2,color:'#ff6b9d',
+    weight:30,size:30,
+  },
+  moon:{
+    emoji:'🌙',label:'月亮',points:3,color:'#e8e8ff',
+    weight:15,size:32,
+  },
+  rainbow:{
+    emoji:'🌈',label:'彩虹',points:5,color:'rainbow',
+    weight:5,size:36,
+  },
+  cloud_bad:{
+    emoji:'☁️',label:'乌云',points:-1,color:'#888',
+    weight:15,size:34,harmful:true,
+  },
+};
+
+function spawnItem(){
+  const types=Object.keys(ITEM_TYPES);
+  // 按权重选择
+  let total=0;
+  types.forEach(t=>total+=ITEM_TYPES[t].weight);
+  let r=rand(0,total);
+  let chosen=types[0];
+  for(const t of types){
+    r-=ITEM_TYPES[t].weight;
+    if(r<=0){chosen=t;break;}
+  }
+  const tmpl=ITEM_TYPES[chosen];
+  const size=tmpl.size;
+  const x=rand(size/2+10,DESIGN_W-size/2-10);
+  G.items.push({
+    type:chosen,
+    x:x,
+    y:-size,
+    size:size,
+    points:tmpl.points,
+    harmful:tmpl.harmful||false,
+    speed:rand(G.speed*0.8,G.speed*1.3),
+    rotation:rand(0,Math.PI*2),
+    rotSpeed:rand(-0.03,0.03),
+    wobble:rand(0,Math.PI*2),
+    wobbleSpeed:rand(0.02,0.05),
+    wobbleAmp:rand(0.5,2),
+    color:tmpl.color,
+    alive:true,
+    bobOffset:rand(0,Math.PI*2),
+  });
+}
+
+// ---------- 粒子 ----------
+function spawnParticles(x,y,color,count=12){
+  for(let i=0;i<count;i++){
+    const angle=rand(0,Math.PI*2);
+    const speed=rand(1.5,5);
+    const size=rand(3,8);
+    G.particles.push({
+      x,y,
+      vx:Math.cos(angle)*speed,
+      vy:Math.sin(angle)*speed-1,
+      size,
+      color,
+      life:1,
+      decay:rand(0.015,0.035),
+      gravity:0.06,
+    });
+  }
+}
+
+function spawnFloats(x,y,text,color='#fff'){
+  G.floats.push({
+    x,y,
+    text,
+    color,
+    life:1,
+    vy:-2.2,
+    decay:0.018,
+  });
+}
+
+// ---------- 绘制函数 ----------
+
+// 绘制猫咪
+function drawCat(cat){
+  const {x,y,w,h,expression,exprTimer,squash}=cat;
+  const cx=x;
+  const cy=y;
+
+  // 压扁效果
+  const sy=1+squash*0.15;
+  const sx=1-squash*0.1;
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale(sx,sy);
+
+  const bodyW=w*0.85;
+  const bodyH=h*0.7;
+  const headR=w*0.42;
+
+  // ---- 身体 ----
+  ctx.beginPath();
+  ctx.ellipse(0,bodyH*0.15,bodyW*0.48,bodyH*0.45,0,0,Math.PI*2);
+  ctx.fillStyle='#ffb347';
+  ctx.fill();
+  ctx.strokeStyle='#e8942e';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+
+  // 白色肚皮
+  ctx.beginPath();
+  ctx.ellipse(0,bodyH*0.25,bodyW*0.3,bodyH*0.3,0,0,Math.PI*2);
+  ctx.fillStyle='#fff5e6';
+  ctx.fill();
+
+  // ---- 头部 ----
+  ctx.beginPath();
+  ctx.arc(0,-headR*0.15,headR,0,Math.PI*2);
+  ctx.fillStyle='#ffb347';
+  ctx.fill();
+  ctx.strokeStyle='#e8942e';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+
+  // ---- 耳朵 ----
+  ctx.save();
+  // 左耳
+  ctx.beginPath();
+  ctx.moveTo(-headR*0.7,-headR*0.55);
+  ctx.lineTo(-headR*0.3,-headR*0.95);
+  ctx.lineTo(-headR*0.05,-headR*0.5);
+  ctx.closePath();
+  ctx.fillStyle='#ffb347';
+  ctx.fill();
+  ctx.strokeStyle='#e8942e';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+  // 内耳粉色
+  ctx.beginPath();
+  ctx.moveTo(-headR*0.57,-headR*0.55);
+  ctx.lineTo(-headR*0.32,-headR*0.82);
+  ctx.lineTo(-headR*0.12,-headR*0.52);
+  ctx.closePath();
+  ctx.fillStyle='#ffb3b3';
+  ctx.fill();
+
+  // 右耳
+  ctx.beginPath();
+  ctx.moveTo(headR*0.7,-headR*0.55);
+  ctx.lineTo(headR*0.3,-headR*0.95);
+  ctx.lineTo(headR*0.05,-headR*0.5);
+  ctx.closePath();
+  ctx.fillStyle='#ffb347';
+  ctx.fill();
+  ctx.strokeStyle='#e8942e';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(headR*0.57,-headR*0.55);
+  ctx.lineTo(headR*0.32,-headR*0.82);
+  ctx.lineTo(headR*0.12,-headR*0.52);
+  ctx.closePath();
+  ctx.fillStyle='#ffb3b3';
+  ctx.fill();
+  ctx.restore();
+
+  // ---- 眼睛 ----
+  const eyeY=-headR*0.15;
+  const eyeSpacing=headR*0.32;
+  // 眼白
+  ctx.fillStyle='#fff';
+  ctx.beginPath();
+  ctx.ellipse(-eyeSpacing,eyeY,headR*0.22,headR*0.25,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(eyeSpacing,eyeY,headR*0.22,headR*0.25,0,0,Math.PI*2);
+  ctx.fill();
+
+  // 瞳孔 - 根据表情
+  let pupilSize=headR*0.15;
+  if(expression==='excited') pupilSize=headR*0.2;
+  else if(expression==='hurt') pupilSize=headR*0.1;
+
+  ctx.fillStyle='#2d1b00';
+  ctx.beginPath();
+  ctx.arc(-eyeSpacing,eyeY,pupilSize,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(eyeSpacing,eyeY,pupilSize,0,Math.PI*2);
+  ctx.fill();
+
+  // 高光
+  ctx.fillStyle='#fff';
+  ctx.beginPath();
+  ctx.arc(-eyeSpacing+pupilSize*0.4,eyeY-pupilSize*0.4,pupilSize*0.35,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(eyeSpacing+pupilSize*0.4,eyeY-pupilSize*0.4,pupilSize*0.35,0,Math.PI*2);
+  ctx.fill();
+
+  // 小高光
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.beginPath();
+  ctx.arc(-eyeSpacing-pupilSize*0.2,eyeY+pupilSize*0.2,pupilSize*0.15,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(eyeSpacing-pupilSize*0.2,eyeY+pupilSize*0.2,pupilSize*0.15,0,Math.PI*2);
+  ctx.fill();
+
+  // ---- 腮红 ----
+  ctx.fillStyle='rgba(255,150,150,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(-eyeSpacing-headR*0.15,eyeY+headR*0.35,headR*0.18,headR*0.12,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(eyeSpacing+headR*0.15,eyeY+headR*0.35,headR*0.18,headR*0.12,0,0,Math.PI*2);
+  ctx.fill();
+
+  // ---- 鼻子 ----
+  ctx.fillStyle='#ff8a8a';
+  ctx.beginPath();
+  ctx.moveTo(0,eyeY+headR*0.2);
+  ctx.lineTo(-headR*0.08,eyeY+headR*0.35);
+  ctx.lineTo(headR*0.08,eyeY+headR*0.35);
+  ctx.closePath();
+  ctx.fill();
+
+  // ---- 嘴巴 ----
+  ctx.strokeStyle='#cc7777';
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  if(expression==='hurt'){
+    // 委屈嘴 - 倒弧形
+    ctx.arc(0,eyeY+headR*0.6,headR*0.12,0,Math.PI,false);
+  }else{
+    // 微笑
+    ctx.arc(0,eyeY+headR*0.42,headR*0.16,0.1,Math.PI-0.1,false);
+  }
+  ctx.stroke();
+
+  // ---- 胡须 ----
+  ctx.strokeStyle='rgba(100,80,60,0.5)';
+  ctx.lineWidth=1.2;
+  const whiskerY=eyeY+headR*0.25;
+  const wLen=headR*0.35;
+  for(let side=-1;side<=1;side+=2){
+    for(let i=-1;i<=1;i++){
+      ctx.beginPath();
+      ctx.moveTo(side*(headR*0.25),whiskerY+i*headR*0.1);
+      ctx.lineTo(side*(headR*0.25+wLen),whiskerY+i*headR*0.15+side*headR*0.05);
+      ctx.stroke();
+    }
+  }
+
+  // ---- 小爪子 (在身体两侧) ----
+  ctx.fillStyle='#ffb347';
+  ctx.strokeStyle='#e8942e';
+  ctx.lineWidth=1;
+  for(let side=-1;side<=1;side+=2){
+    ctx.beginPath();
+    ctx.ellipse(side*bodyW*0.4,bodyH*0.45,headR*0.12,headR*0.1,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.stroke();
+    // 爪爪线
+    ctx.strokeStyle='rgba(180,120,80,0.3)';
+    ctx.lineWidth=1;
+    for(let j=-1;j<=1;j++){
+      ctx.beginPath();
+      ctx.moveTo(side*bodyW*0.4+j*headR*0.04,bodyH*0.45+headR*0.05);
+      ctx.lineTo(side*bodyW*0.4+j*headR*0.04,bodyH*0.45+headR*0.09);
+      ctx.stroke();
+    }
+    ctx.strokeStyle='#e8942e';
+  }
+
+  ctx.restore();
+}
+
+// 绘制星星
+function drawStar(cx,cy,r,color='#ffd700',rotation=0){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rotation);
+  const spikes=5;
+  const outerR=r;
+  const innerR=r*0.4;
+  ctx.beginPath();
+  for(let i=0;i<spikes*2;i++){
+    const radius=i%2===0?outerR:innerR;
+    const angle=(i*Math.PI)/spikes-Math.PI/2;
+    const px=Math.cos(angle)*radius;
+    const py=Math.sin(angle)*radius;
+    if(i===0) ctx.moveTo(px,py);
+    else ctx.lineTo(px,py);
+  }
+  ctx.closePath();
+  ctx.fillStyle=color;
+  ctx.fill();
+  ctx.strokeStyle='rgba(255,200,50,0.5)';
+  ctx.lineWidth=1.5;
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 绘制心形
+function drawHeart(cx,cy,size,color='#ff6b9d'){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale(size/20,size/20);
+  ctx.beginPath();
+  ctx.moveTo(0,5);
+  ctx.bezierCurveTo(-10,-5,-20,5,0,18);
+  ctx.bezierCurveTo(20,5,10,-5,0,5);
+  ctx.fillStyle=color;
+  ctx.fill();
+  ctx.restore();
+}
+
+// 绘制糖果
+function drawCandy(cx,cy,r,rotation=0){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rotation);
+  // 圆形糖果主体
+  const grad=ctx.createRadialGradient(-r*0.3,-r*0.3,0,0,0,r);
+  grad.addColorStop(0,'#ffb3d9');
+  grad.addColorStop(0.5,'#ff69b4');
+  grad.addColorStop(1,'#e0408a');
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.fillStyle=grad;
+  ctx.fill();
+  // 糖果条纹
+  ctx.strokeStyle='rgba(255,255,255,0.4)';
+  ctx.lineWidth=2;
+  for(let i=0;i<3;i++){
+    const a=i*Math.PI/3+rotation;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a)*r*0.5,Math.sin(a)*r*0.5);
+    ctx.lineTo(Math.cos(a)*r*0.9,Math.sin(a)*r*0.9);
+    ctx.stroke();
+  }
+  // 高光
+  ctx.fillStyle='rgba(255,255,255,0.3)';
+  ctx.beginPath();
+  ctx.arc(-r*0.25,-r*0.3,r*0.25,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// 绘制月亮
+function drawMoon(cx,cy,r,rotation=0){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rotation);
+  ctx.fillStyle='#f0e6ff';
+  ctx.shadowColor='rgba(200,180,255,0.3)';
+  ctx.shadowBlur=10;
+  ctx.beginPath();
+  ctx.arc(0,0,r,0,Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur=0;
+  // 月牙暗部
+  ctx.fillStyle='rgba(180,160,220,0.4)';
+  ctx.beginPath();
+  ctx.arc(r*0.3,-r*0.2,r*0.8,0,Math.PI*2);
+  ctx.fill();
+  // 小环形山
+  ctx.fillStyle='rgba(200,180,230,0.3)';
+  ctx.beginPath();
+  ctx.arc(-r*0.2,r*0.15,r*0.15,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(r*0.1,-r*0.3,r*0.1,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// 绘制彩虹
+function drawRainbow(cx,cy,r){
+  ctx.save();
+  ctx.translate(cx,cy);
+  const colors=['#ff6b6b','#ffa94d','#ffd43b','#69db7c','#4dabf7','#b197fc'];
+  const band=r/colors.length;
+  for(let i=0;i<colors.length;i++){
+    ctx.beginPath();
+    ctx.arc(0,0,r-i*band,0.1,Math.PI-0.1,false);
+    ctx.strokeStyle=colors[i];
+    ctx.lineWidth=band*1.2;
+    ctx.stroke();
+  }
+  // 小云朵在两端
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  ctx.beginPath();
+  ctx.arc(-r*0.15,-r*0.3,r*0.15,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(r*0.15,-r*0.3,r*0.12,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// 绘制乌云
+function drawCloud(cx,cy,r,rotation=0){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(rotation);
+  const baseColor='#8899aa';
+  ctx.fillStyle=baseColor;
+  ctx.shadowColor='rgba(100,100,120,0.2)';
+  ctx.shadowBlur=8;
+  ctx.beginPath();
+  ctx.arc(0,0,r*0.45,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(-r*0.4,r*0.05,r*0.35,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(r*0.4,r*0.05,r*0.35,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(-r*0.2,-r*0.3,r*0.3,0,Math.PI*2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(r*0.2,-r*0.3,r*0.3,0,Math.PI*2);
+  ctx.fill();
+  ctx.shadowBlur=0;
+  // 小雨滴
+  ctx.fillStyle='rgba(150,200,255,0.5)';
+  for(let i=0;i<5;i++){
+    const dx=rand(-r*0.5,r*0.5);
+    const dy=rand(r*0.2,r*0.6);
+    ctx.beginPath();
+    ctx.ellipse(dx,dy,2,4,0,0,Math.PI*2);
+    ctx.fill();
+  }
+  // 闪电
+  ctx.strokeStyle='rgba(255,230,100,0.6)';
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(r*0.1,r*0.1);
+  ctx.lineTo(r*0.25,r*0.35);
+  ctx.lineTo(r*0.15,r*0.35);
+  ctx.lineTo(r*0.3,r*0.6);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// 绘制物品
+function drawItem(item){
+  const {type,x,y,size,rotation,color}=item;
+  const r=size/2;
+
+  ctx.save();
+  ctx.translate(x,y);
+
+  // 发光效果
+  if(type!=='cloud_bad'){
+    ctx.shadowColor=color==='rainbow'?'rgba(255,200,100,0.3)':color+'44';
+    ctx.shadowBlur=12;
+  }
+
+  switch(type){
+    case 'star':
+      drawStar(0,0,r,'#ffd700',rotation);
+      break;
+    case 'candy':
+      drawCandy(0,0,r,rotation);
+      break;
+    case 'moon':
+      drawMoon(0,0,r,rotation);
+      break;
+    case 'rainbow':
+      drawRainbow(0,0,r);
+      break;
+    case 'cloud_bad':
+      drawCloud(0,0,r,rotation);
+      break;
+  }
+  ctx.restore();
+}
+
+// ---------- 更新逻辑 ----------
+function update(){
+  G.frame++;
+
+  // ---- 背景星星闪烁 ----
+  G.bgStars.forEach(s=>{
+    s.a=0.4+0.6*(0.5+0.5*Math.sin(G.frame*0.02*s.speed+s.phase));
+  });
+
+  // ---- 背景云移动 ----
+  G.bgClouds.forEach(c=>{
+    c.x+=c.speed;
+    if(c.x>DESIGN_W+c.w) c.x=-c.w;
+  });
+
+  if(G.state!=='playing') return;
+
+  const cat=G.cat;
+
+  // ---- 猫咪移动 ----
+  cat.x=lerp(cat.x,cat.targetX,0.12);
+  // 压扁恢复
+  cat.squash=lerp(cat.squash,0,0.08);
+  // 表情计时
+  if(cat.exprTimer>0){
+    cat.exprTimer--;
+    if(cat.exprTimer===0) cat.expression='happy';
+  }
+
+  // ---- 生成物品 ----
+  G.spawnTimer++;
+  const interval=Math.max(25,G.spawnInterval-G.difficulty*2);
+  if(G.spawnTimer>=interval){
+    G.spawnTimer=0;
+    spawnItem();
+    // 偶尔一次掉两个
+    if(Math.random()<0.15+G.difficulty*0.02){
+      spawnItem();
+    }
+  }
+
+  // ---- 更新物品 ----
+  const toRemove=[];
+  G.items.forEach((item,i)=>{
+    item.y+=item.speed;
+    item.rotation+=item.rotSpeed;
+    item.wobble+=item.wobbleSpeed;
+    item.x+=Math.sin(item.wobble)*item.wobbleAmp*0.3;
+
+    // 超出屏幕
+    if(item.y>DESIGN_H+item.size){
+      toRemove.push(i);
+      return;
+    }
+
+    // 碰撞检测（与猫咪）
+    const catHitX=cat.x;
+    const catHitY=cat.y+5;
+    const catHitR=Math.max(cat.w,cat.h)*0.4;
+    const distToCat=dist(item.x,item.y,catHitX,catHitY);
+    const hitDist=catHitR+item.size*0.45;
+
+    if(distToCat<hitDist && item.alive){
+      item.alive=false;
+      toRemove.push(i);
+
+      if(item.harmful){
+        // 碰到乌云
+        G.lives--;
+        G.combo=0;
+        cat.expression='hurt';
+        cat.exprTimer=30;
+        cat.squash=1;
+        spawnParticles(item.x,item.y,'#888',8);
+        playSound('hurt');
+        if(G.lives<=0){
+          G.state='over';
+          playSound('gameover');
+        }
+      }else{
+        // 收集到好东西
+        const pts=item.points;
+        // combo加成
+        G.combo++;
+        const bonus=Math.min(G.combo,10);
+        const totalPts=pts+Math.floor(pts*bonus*0.1);
+        G.score+=totalPts;
+
+        // 特效
+        const colors=item.type==='star'?['#ffd700','#ffec8b','#fff3bf']
+          :item.type==='candy'?['#ff6b9d','#ffb3d9','#ff4081']
+          :item.type==='moon'?['#e8e8ff','#c0c0ff','#f0e6ff']
+          :['#ff6b6b','#ffd43b','#69db7c','#4dabf7','#b197fc'];
+        spawnParticles(item.x,item.y,colors[randInt(0,colors.length-1)],14);
+        const bonusText=bonus>2?`  ✨x${bonus}`:'';
+        spawnFloats(item.x,item.y-10,`+${totalPts}${bonusText}`,colors[0]);
+
+        cat.expression='excited';
+        cat.exprTimer=15;
+        cat.squash=0.6;
+
+        playSound(pts>=5?'bonus':'collect');
+
+        // 增加难度
+        G.difficulty=Math.min(10,Math.floor(G.score/8)+1);
+        G.speed=1.8+G.difficulty*0.3;
+      }
+    }
+  });
+  // 从后往前删
+  for(let i=toRemove.length-1;i>=0;i--){
+    G.items.splice(toRemove[i],1);
+  }
+
+  // ---- 更新粒子 ----
+  for(let i=G.particles.length-1;i>=0;i--){
+    const p=G.particles[i];
+    p.x+=p.vx;
+    p.vy+=p.gravity;
+    p.y+=p.vy;
+    p.life-=p.decay;
+    if(p.life<=0){G.particles.splice(i,1);continue;}
+  }
+
+  // ---- 更新浮动文字 ----
+  for(let i=G.floats.length-1;i>=0;i--){
+    const f=G.floats[i];
+    f.y+=f.vy;
+    f.life-=f.decay;
+    if(f.life<=0){G.floats.splice(i,1);continue;}
+  }
+}
+
+// ---------- 渲染 ----------
+function draw(){
+  ctx.clearRect(0,0,DESIGN_W,DESIGN_H);
+
+  // ---- 背景渐变 ----
+  const grad=ctx.createLinearGradient(0,0,0,DESIGN_H);
+  grad.addColorStop(0,'#1a1a3e');
+  grad.addColorStop(0.3,'#2d1b4e');
+  grad.addColorStop(0.6,'#4a1942');
+  grad.addColorStop(0.8,'#6b2fa0');
+  grad.addColorStop(1,'#2d1b69');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,DESIGN_W,DESIGN_H);
+
+  // ---- 背景星星 ----
+  G.bgStars.forEach(s=>{
+    ctx.fillStyle=`rgba(255,255,255,${s.a})`;
+    ctx.beginPath();
+    ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  // ---- 背景云 ----
+  G.bgClouds.forEach(c=>{
+    ctx.fillStyle=`rgba(255,255,255,${c.a})`;
+    ctx.beginPath();
+    ctx.arc(c.x,c.y,c.w*0.3,0,Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c.x-c.w*0.2,c.y+c.w*0.1,c.w*0.25,0,Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c.x+c.w*0.2,c.y+c.w*0.1,c.w*0.25,0,Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c.x-c.w*0.1,c.y-c.w*0.15,c.w*0.2,0,Math.PI*2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(c.x+c.w*0.1,c.y-c.w*0.15,c.w*0.2,0,Math.PI*2);
+    ctx.fill();
+  });
+
+  // ---- 地面装饰 ----
+  ctx.fillStyle='rgba(255,255,255,0.03)';
+  ctx.fillRect(0,DESIGN_H-30,DESIGN_W,30);
+  ctx.fillStyle='rgba(255,255,255,0.05)';
+  for(let i=0;i<DESIGN_W;i+=15){
+    const h=4+Math.sin(i*0.3+G.frame*0.01)*2;
+    ctx.fillRect(i,DESIGN_H-30+(15-h),1,h);
+  }
+
+  // ---- 物品 ----
+  G.items.forEach(item=>drawItem(item));
+
+  // ---- 猫咪 ----
+  drawCat(G.cat);
+
+  // ---- 粒子 ----
+  G.particles.forEach(p=>{
+    ctx.globalAlpha=p.life;
+    ctx.fillStyle=p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.size*p.life,0,Math.PI*2);
+    ctx.fill();
+  });
+  ctx.globalAlpha=1;
+
+  // ---- 浮动文字 ----
+  G.floats.forEach(f=>{
+    ctx.globalAlpha=Math.min(1,f.life*2);
+    ctx.fillStyle=f.color;
+    ctx.font='bold 22px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.textAlign='center';
+    ctx.shadowColor='rgba(0,0,0,0.5)';
+    ctx.shadowBlur=4;
+    ctx.fillText(f.text,f.x,f.y);
+    ctx.shadowBlur=0;
+  });
+  ctx.globalAlpha=1;
+
+  // ---- UI：分数 ----
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  roundRect(ctx,12,10,140,38,18);
+  ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.font='bold 18px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign='left';
+  ctx.fillText(`⭐ ${G.score}`,26,36);
+
+  // ---- UI：连击 ----
+  if(G.combo>=3 && G.state==='playing'){
+    ctx.fillStyle='rgba(255,215,0,0.2)';
+    roundRect(ctx,160,10,80,32,16);
+    ctx.fill();
+    ctx.fillStyle='#ffd700';
+    ctx.font='14px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.textAlign='center';
+    ctx.fillText(`🔥 x${G.combo}`,200,32);
+  }
+
+  // ---- UI：生命 ----
+  ctx.textAlign='right';
+  for(let i=0;i<G.maxLives;i++){
+    const hx=DESIGN_W-16-i*26;
+    const hy=20;
+    if(i<G.lives){
+      drawHeart(hx,hy,14,'#ff6b9d');
+    }else{
+      ctx.globalAlpha=0.25;
+      drawHeart(hx,hy,14,'#666');
+      ctx.globalAlpha=1;
+    }
+  }
+
+  // ---- 按钮：分享 ----
+  ctx.fillStyle='rgba(255,255,255,0.12)';
+  roundRect(ctx,DESIGN_W-120,10,110,34,17);
+  ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  ctx.font='13px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('💌 分享',DESIGN_W-65,33);
+
+  // ---- 状态界面 ----
+  if(G.state==='menu'){
+    drawMenu();
+  }else if(G.state==='over'){
+    drawGameOver();
+  }
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+h,r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+function drawMenu(){
+  // 半透明遮罩
+  ctx.fillStyle='rgba(0,0,0,0.35)';
+  ctx.fillRect(0,0,DESIGN_W,DESIGN_H);
+
+  // 标题卡片
+  const cx=DESIGN_W/2;
+  const cy=DESIGN_H/2-40;
+
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  roundRect(ctx,cx-170,cy-120,340,280,28);
+  ctx.fill();
+
+  // 边框光效
+  ctx.strokeStyle='rgba(255,255,255,0.1)';
+  ctx.lineWidth=1;
+  roundRect(ctx,cx-170,cy-120,340,280,28);
+  ctx.stroke();
+
+  // 标题
+  ctx.fillStyle='#fff';
+  ctx.font='bold 42px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign='center';
+  ctx.shadowColor='rgba(255,200,100,0.3)';
+  ctx.shadowBlur=20;
+  ctx.fillText('⭐ 星星猫',cx,cy-50);
+  ctx.shadowBlur=0;
+
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.font='16px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('和小猫咪一起收集天上的星星吧 ✨',cx,cy-10);
+
+  // 操作说明
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.font='13px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('👆 滑动屏幕控制猫咪移动',cx,cy+35);
+  ctx.fillText('⭐ 接住星星和糖果得分',cx,cy+58);
+  ctx.fillText('☁️ 小心避开乌云！',cx,cy+81);
+
+  // 开始按钮
+  const btnY=cy+130;
+  const grad2=ctx.createLinearGradient(cx-90,btnY-20,cx+90,btnY+20);
+  grad2.addColorStop(0,'#ff6b6b');
+  grad2.addColorStop(0.5,'#ffa94d');
+  grad2.addColorStop(1,'#ffd43b');
+  ctx.fillStyle=grad2;
+  ctx.shadowColor='rgba(255,107,107,0.3)';
+  ctx.shadowBlur=15;
+  roundRect(ctx,cx-90,btnY-22,180,44,22);
+  ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';
+  ctx.font='bold 20px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('开始游戏 🎮',cx,btnY+7);
+  // 存储按钮区域用于点击检测
+  G.btnStart={x:cx-90,y:btnY-22,w:180,h:44};
+}
+
+function drawGameOver(){
+  ctx.fillStyle='rgba(0,0,0,0.45)';
+  ctx.fillRect(0,0,DESIGN_W,DESIGN_H);
+
+  const cx=DESIGN_W/2;
+  const cy=DESIGN_H/2-20;
+
+  ctx.fillStyle='rgba(255,255,255,0.08)';
+  roundRect(ctx,cx-160,cy-100,320,230,28);
+  ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.1)';
+  ctx.lineWidth=1;
+  roundRect(ctx,cx-160,cy-100,320,230,28);
+  ctx.stroke();
+
+  ctx.fillStyle='#fff';
+  ctx.font='bold 32px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.textAlign='center';
+  ctx.fillText('游戏结束 🌟',cx,cy-45);
+
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.font='18px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText(`得分：${G.score}`,cx,cy);
+
+  if(G.combo>=5){
+    ctx.fillStyle='#ffd700';
+    ctx.font='16px "PingFang SC","Microsoft YaHei",sans-serif';
+    ctx.fillText(`🔥 最高连击 x${G.combo}！太棒啦！`,cx,cy+35);
+  }
+
+  // 评价
+  let comment='再接再厉哦~ 💪';
+  if(G.score>=100) comment='星星收集大师！🏆';
+  else if(G.score>=50) comment='好厉害！继续加油~ 🌟';
+  else if(G.score>=20) comment='不错哦！✨';
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.font='14px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText(comment,cx,cy+65);
+
+  // 重新开始按钮
+  const btnY=cy+115;
+  const grad3=ctx.createLinearGradient(cx-80,btnY-18,cx+80,btnY+18);
+  grad3.addColorStop(0,'#a29bfe');
+  grad3.addColorStop(1,'#6c5ce7');
+  ctx.fillStyle=grad3;
+  ctx.shadowColor='rgba(108,92,231,0.3)';
+  ctx.shadowBlur=12;
+  roundRect(ctx,cx-80,btnY-18,160,36,18);
+  ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#fff';
+  ctx.font='bold 17px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('再来一次 🔄',cx,btnY+6);
+  G.btnRestart={x:cx-80,y:btnY-18,w:160,h:36};
+
+  // 分享按钮
+  const btnShareY=btnY+58;
+  ctx.fillStyle='rgba(255,255,255,0.15)';
+  roundRect(ctx,cx-80,btnShareY-18,160,36,18);
+  ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.font='15px "PingFang SC","Microsoft YaHei",sans-serif';
+  ctx.fillText('💌 分享给好友',cx,btnShareY+6);
+  G.btnShare={x:cx-80,y:btnShareY-18,w:160,h:36};
+}
+
+// ---------- 输入处理 ----------
+function getPos(e){
+  let clientX,clientY;
+  if(e.touches){
+    clientX=e.touches[0].clientX;
+    clientY=e.touches[0].clientY;
+  }else{
+    clientX=e.clientX;
+    clientY=e.clientY;
+  }
+  // 转换到canvas坐标
+  const rect=canvas.getBoundingClientRect();
+  const x=(clientX-rect.left)/scale;
+  const y=(clientY-rect.top)/scale;
+  return {x,y};
+}
+
+function handlePointerStart(e){
+  e.preventDefault();
+  const {x,y}=getPos(e);
+
+  if(G.state==='menu'){
+    if(G.btnStart && x>=G.btnStart.x && x<=G.btnStart.x+G.btnStart.w &&
+       y>=G.btnStart.y && y<=G.btnStart.y+G.btnStart.h){
+      G.state='playing';
+      playSound('start');
+      return;
+    }
+  }
+
+  if(G.state==='over'){
+    if(G.btnRestart && x>=G.btnRestart.x && x<=G.btnRestart.x+G.btnRestart.w &&
+       y>=G.btnRestart.y && y<=G.btnRestart.y+G.btnRestart.h){
+      resetGame();
+      G.state='playing';
+      playSound('start');
+      return;
+    }
+    if(G.btnShare && x>=G.btnShare.x && x<=G.btnShare.x+G.btnShare.w &&
+       y>=G.btnShare.y && y<=G.btnShare.y+G.btnShare.h){
+      showShare();
+      return;
+    }
+  }
+
+  // 分享按钮（顶部）
+  if(x>=DESIGN_W-150 && x<=DESIGN_W-10 && y>=2 && y<=50){
+    showShare();
+    return;
+  }
+}
+
+function handlePointerMove(e){
+  e.preventDefault();
+  const {x,y}=getPos(e);
+  if(G.state==='playing' || G.state==='menu'){
+    G.cat.targetX=clamp(x,G.cat.w/2+10,DESIGN_W-G.cat.w/2-10);
+  }
+}
+
+// ---- 鼠标事件 ----
+canvas.addEventListener('mousedown',handlePointerStart);
+canvas.addEventListener('mousemove',handlePointerMove);
+canvas.addEventListener('mouseleave',()=>{});
+
+// ---- 触摸事件 ----
+canvas.addEventListener('touchstart',handlePointerStart,{passive:false});
+canvas.addEventListener('touchmove',handlePointerMove,{passive:false});
+canvas.addEventListener('touchend',(e)=>{
+  e.preventDefault();
+  // 松开时猫咪停在原地
+},{passive:false});
+
+// ---------- 游戏循环 ----------
+function gameLoop(){
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+
+// ---------- 键盘支持（PC） ----------
+const keys={};
+document.addEventListener('keydown',(e)=>{
+  keys[e.key]=true;
+  if(e.key==='Enter' || e.key===' '){
+    if(G.state==='menu' && G.btnStart){
+      G.state='playing';
+      playSound('start');
+    }else if(G.state==='over' && G.btnRestart){
+      resetGame();
+      G.state='playing';
+      playSound('start');
+    }
+  }
+});
+document.addEventListener('keyup',(e)=>{keys[e.key]=false;});
+
+// 键盘控制猫咪移动
+setInterval(()=>{
+  if(G.state==='playing'){
+    if(keys['ArrowLeft'] || keys['a']) G.cat.targetX=G.cat.x-8;
+    if(keys['ArrowRight'] || keys['d']) G.cat.targetX=G.cat.x+8;
+    G.cat.targetX=clamp(G.cat.targetX,G.cat.w/2+10,DESIGN_W-G.cat.w/2-10);
+  }
+},16);
+
+// ---------- 启动 ----------
+resetGame();
+setupWechatShare();
+gameLoop();
+
+// 适配屏幕变化
+window.addEventListener('orientationchange',()=>{
+  setTimeout(resizeCanvas,300);
+});
+
+console.log('⭐ 星星猫游戏已加载！');
+console.log('💡 提示：点击右上角 "💌 分享" 可分享给微信好友');
+</script>
+</body>
+</html>
