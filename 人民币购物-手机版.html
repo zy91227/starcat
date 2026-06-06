@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<title>🧸 逛超市购物付钱小达人 · 认识人民币</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+html,body{width:100%;min-height:100vh;overflow-x:hidden;background:#fbf3e0;font-family:-apple-system,'PingFang SC','Microsoft YaHei','Noto Sans SC',sans-serif}
+
+/* 主容器 - 移动优先 */
+.game-wrap{
+  width:100%;min-height:100vh;max-width:480px;margin:0 auto;
+  background:linear-gradient(180deg,#fff8ed,#fae3c3);
+  padding:8px 10px 20px;position:relative;
+}
+
+/* 顶部标题 */
+.header{
+  display:flex;align-items:center;gap:6px;margin-bottom:6px;
+}
+.header h1{font-size:18px;font-weight:700;color:#5e3e1c;display:flex;align-items:center;gap:4px}
+.header .share-btn{
+  margin-left:auto;font-size:13px;background:rgba(255,255,255,0.7);border:1.5px solid #f5cd9a;
+  border-radius:20px;padding:3px 12px;color:#7a531c;font-weight:600;cursor:pointer;
+  box-shadow:0 2px 0 #d4ae7a;transition:0.05s linear;
+}
+.header .share-btn:active{transform:translateY(1px);box-shadow:0 1px 0 #d4ae7a}
+.subtitle{font-size:12px;color:#8a6a42;margin-bottom:8px;background:#ffefd2;display:inline-block;padding:2px 12px;border-radius:12px}
+
+/* 商品区域 */
+.section-title{font-size:15px;font-weight:700;color:#5e3e1c;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.product-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px}
+.prod-card{
+  background:#fff;border-radius:12px;padding:5px 3px;text-align:center;
+  box-shadow:0 3px 0 #ccaa7a,0 3px 6px rgba(0,0,0,0.08);border:1.5px solid #f5cd9a;
+  cursor:pointer;transition:0.05s linear;
+}
+.prod-card:active{transform:translateY(2px);box-shadow:0 1px 0 #b38b54}
+.prod-emoji{font-size:24px;display:block;margin-bottom:2px}
+.prod-name{font-size:10px;font-weight:600;color:#4d2f12;line-height:1.2}
+.prod-price{font-size:11px;font-weight:800;color:#c0392b;background:#ffeaa7;border-radius:10px;padding:1px 4px;display:inline-block;margin-top:2px}
+
+/* 购物车 */
+.cart-section{
+  background:#e6dccb;border-radius:16px;padding:8px 10px;
+  box-shadow:inset 0 0 0 2px #d4bb9a,0 3px 0 #b3926a;margin-bottom:8px;
+}
+.cart-header{font-size:14px;font-weight:700;color:#4a3118;margin-bottom:4px}
+.cart-items{
+  min-height:36px;max-height:72px;overflow-y:auto;background:#fff9ed;
+  border-radius:12px;padding:4px 6px;margin-bottom:4px;font-size:12px;
+}
+.cart-item{display:flex;justify-content:space-between;padding:2px 4px;border-bottom:1px dashed #c9ad87;font-size:12px}
+.cart-total-row{display:flex;justify-content:space-between;align-items:center}
+.cart-total{font-size:18px;font-weight:800;color:#2e4a1c}
+.clear-btn{font-size:12px;background:#f5e6d0;border:none;border-radius:16px;padding:4px 12px;font-weight:600;color:#5e3e1c;box-shadow:0 2px 0 #c9ad87;cursor:pointer;font-family:inherit}
+.clear-btn:active{transform:translateY(1px);box-shadow:0 1px 0 #c9ad87}
+
+/* 付款方式切换 */
+.pay-method-switch{
+  display:flex;background:#e7d5bb;border-radius:20px;padding:2px;
+  box-shadow:inset 0 1px 3px #bb9e7a,0 2px 0 #9e8466;margin-bottom:8px;
+}
+.method-btn{
+  flex:1;background:transparent;border:none;padding:7px 4px;font-size:14px;
+  font-weight:700;color:#4f3519;border-radius:20px;cursor:pointer;font-family:inherit;transition:0.1s;
+}
+.method-btn.active{background:#ffd89c;box-shadow:0 2px 0 #b38b54;transform:translateY(-1px)}
+
+/* 付款面板 */
+.pay-panel{
+  background:#d9e8d4;border-radius:16px;padding:8px 10px 10px;
+  box-shadow:inset 0 0 0 2px #b6cfaa,0 4px 0 #7f9a6e;margin-bottom:8px;
+}
+.pay-label{font-size:12px;font-weight:600;color:#3b5e2b;margin-bottom:4px}
+.drop-zone{
+  background:#fbf3dd;border-radius:14px;padding:6px;border:2.5px dashed #b5945c;
+  min-height:60px;box-shadow:inset 0 2px 4px #e9d6b2;
+  display:flex;flex-wrap:wrap;align-items:center;gap:5px;cursor:pointer;margin-bottom:4px;
+}
+.drop-zone:empty::after{content:'👆 点击这里放置钱币';color:#bc9a6c;font-size:12px;padding:4px}
+.zone-total{font-size:16px;font-weight:800;background:#eef7e0;padding:2px 12px;border-radius:20px;display:inline-block;border:2px solid #7fa86a;margin-bottom:4px}
+.btn-group{display:flex;gap:6px;margin-top:4px}
+.pay-btn{
+  flex:1;background:#ffd89c;border:none;padding:8px 8px;border-radius:20px;font-weight:700;
+  font-size:14px;color:#422b0e;box-shadow:0 3px 0 #bc8f5a;border:1.5px solid #ffc489;cursor:pointer;font-family:inherit;
+}
+.pay-btn:active{transform:translateY(2px);box-shadow:0 1px 0 #bc8f5a}
+.feedback{font-weight:700;font-size:13px;color:#b64516;margin-top:6px;min-height:20px}
+
+/* 找零区域 */
+.change-section{margin-top:6px;border-top:2px dashed #aec99b;padding-top:6px}
+.change-section .drop-zone{min-height:50px}
+.change-section .drop-zone:empty::after{content:'👆 点击这里放找零';color:#bc9a6c;font-size:12px;padding:4px}
+
+/* 人民币选择区 */
+.money-area{margin-top:4px}
+.money-title{font-size:14px;font-weight:700;color:#6b4226;margin-bottom:4px}
+.money-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  background:#faeedc;border-radius:16px;padding:10px 8px;
+  box-shadow:inset 0 0 0 2px #ebcfaa,0 4px 0 #b49262;
+}
+.money-item{
+  background:#fef7e9;border-radius:12px;padding:5px 3px;text-align:center;
+  box-shadow:0 3px 0 #af8f66;border:2px solid #dbb47a;cursor:pointer;transition:0.05s linear;
+  position:relative;
+}
+.money-item:active{transform:translateY(2px);box-shadow:0 1px 0 #af8f66}
+.money-item.selected{
+  box-shadow:0 0 0 3px #ffbb2e,0 3px 0 #af8f66;
+  border-color:#ff8c00;transform:scale(1.04);
+}
+.money-label{font-weight:700;font-size:10px;color:#3b2a11;background:rgba(255,219,176,0.6);border-radius:10px;padding:1px 4px;display:inline-block}
+
+/* 钱币图片样式 */
+.money-img{
+  width:100%;height:58px;object-fit:contain;border-radius:6px;
+  display:block;margin-bottom:3px;background:#fff3e0;
+}
+.money-item.coin-style .money-img{
+  border-radius:50%;width:48px;height:48px;margin:2px auto 3px;
+  border:2px solid #b8955c;padding:2px;
+}
+
+/* 已放置的钱币缩略图（图片版） */
+.money-thumb{
+  width:60px;height:44px;border-radius:6px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;background:#fff3e0;border:1.5px solid #dbb47a;
+  box-shadow:0 2px 0 rgba(0,0,0,0.15);padding:2px;overflow:hidden;
+}
+.money-thumb.coin-thumb{
+  width:44px;height:44px;border-radius:50%;
+  border:2px solid #b8955c;
+}
+.money-thumb .thumb-img{
+  width:100%;height:100%;object-fit:contain;display:block;
+}
+.money-thumb.coin-thumb .thumb-img{
+  border-radius:50%;padding:2px;
+}
+.money-thumb .remove-x{
+  position:absolute;top:-4px;right:-4px;width:18px;height:18px;background:#ff4444;
+  color:#fff;border-radius:50%;font-size:11px;line-height:18px;text-align:center;font-weight:700;
+  border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* 烟花Canvas */
+#fireworksCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:999}
+
+/* 分享遮罩 */
+#shareOverlay{
+  display:none;position:fixed;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.7);z-index:1000;
+  justify-content:center;align-items:center;
+}
+#shareOverlay.show{display:flex}
+#shareBox{
+  background:linear-gradient(135deg,#fff5f5,#fff0f6);
+  border-radius:24px;padding:28px 22px;text-align:center;
+  max-width:300px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.3);
+  animation:popIn .4s cubic-bezier(0.175,0.885,0.32,1.275);
+}
+@keyframes popIn{0%{transform:scale(0.5);opacity:0}100%{transform:scale(1);opacity:1}}
+#shareBox .icon{font-size:42px;margin-bottom:8px}
+#shareBox h3{font-size:18px;color:#333;margin-bottom:6px}
+#shareBox p{font-size:13px;color:#888;margin-bottom:16px}
+#shareBox .arrow-box{background:#fff;border-radius:14px;padding:14px;border:2px dashed #ffd43b;margin-bottom:16px}
+#shareBox .arrow{display:block;font-size:36px;animation:bounce .8s ease-in-out infinite alternate}
+@keyframes bounce{0%{transform:translateY(0)}100%{transform:translateY(-8px)}}
+.share-close{
+  display:inline-block;padding:9px 32px;
+  background:linear-gradient(135deg,#ff6b6b,#ffa94d);color:#fff;border:none;
+  border-radius:30px;font-size:15px;font-weight:bold;cursor:pointer;
+  box-shadow:0 4px 15px rgba(255,107,107,0.4);
+}
+
+/* 响应式适配 */
+@media(min-width:420px){
+  .money-grid{grid-template-columns:repeat(4,1fr)}
+}
+@media(max-width:370px){
+  .product-grid{grid-template-columns:repeat(5,1fr);gap:4px}
+  .prod-emoji{font-size:20px}
+  .prod-name{font-size:9px}
+  .money-img{height:48px}
+  .money-item.coin-style .money-img{width:38px;height:38px}
+  .money-grid{grid-template-columns:repeat(4,1fr);gap:4px;padding:6px}
+  .money-thumb{width:48px;height:36px}
+  .money-thumb.coin-thumb{width:36px;height:36px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="fireworksCanvas"></canvas>
+
+<div class="game-wrap">
+  <!-- 顶部 -->
+  <div class="header">
+    <h1>🛒 购物小达人 🧸</h1>
+    <button class="share-btn" onclick="showShare()">💌 分享</button>
+  </div>
+  <div class="subtitle">⭐ 点商品 → 选钱币 → 点付款区 → 检查</div>
+
+  <!-- 商品区 -->
+  <div class="section-title">📦 商品</div>
+  <div class="product-grid" id="productGrid"></div>
+
+  <!-- 购物车 -->
+  <div class="cart-section">
+    <div class="cart-header">🧺 购物车</div>
+    <div class="cart-items" id="cartContainer">🛒 空空如也，点商品添加</div>
+    <div class="cart-total-row">
+      <span class="cart-total" id="cartTotalDisplay">￥0元0角0分</span>
+      <button class="clear-btn" id="clearCartBtn">🗑️ 清空</button>
+    </div>
+  </div>
+
+  <!-- 付款方式 -->
+  <div class="pay-method-switch">
+    <button class="method-btn active" data-method="exact">正好支付</button>
+    <button class="method-btn" data-method="change">付整找零</button>
+  </div>
+
+  <!-- 付款面板 -->
+  <div class="pay-panel">
+    <!-- 正好支付 -->
+    <div id="exactPayArea">
+      <div class="pay-label">💴 先选钱币，再点下方放置区放入</div>
+      <div class="drop-zone" id="exactPayDropZone"></div>
+      <div class="zone-total" id="exactPayTotalDisplay">￥0元0角0分</div>
+      <div class="btn-group">
+        <button class="pay-btn" id="checkExactPayBtn">✅ 检查付款</button>
+      </div>
+    </div>
+
+    <!-- 付整找零 -->
+    <div id="changePayArea" style="display:none">
+      <div class="pay-label">💵 第1步：付整钱（选钱币后点击下方）</div>
+      <div class="drop-zone" id="changePaidDropZone"></div>
+      <div class="zone-total" id="changePaidTotal">￥0元0角0分</div>
+      <div class="change-section">
+        <div class="pay-label">🪙 第2步：找零（选钱币后点击下方）</div>
+        <div class="drop-zone" id="changeGiveDropZone"></div>
+        <div class="zone-total" id="changeGiveTotal">￥0元0角0分</div>
+      </div>
+      <div class="btn-group">
+        <button class="pay-btn" id="checkChangeBtn">✅ 检查找零</button>
+      </div>
+    </div>
+    <div class="feedback" id="feedbackMessage">✨ 先加购商品吧～</div>
+  </div>
+
+  <!-- 人民币选择 -->
+  <div class="money-area">
+    <div class="money-title">💴 人民币（点击选中，再点付款区放置）</div>
+    <div class="money-grid" id="moneyContainer"></div>
+  </div>
+</div>
+
+<!-- 分享弹窗 -->
+<div id="shareOverlay">
+  <div class="share-box" id="shareBox">
+    <div class="icon">🥰</div>
+    <h3>分享给小伙伴</h3>
+    <p>让更多小朋友来学认人民币吧！</p>
+    <div class="arrow-box">
+      <span class="arrow">☝️</span>
+      <div style="font-size:14px;color:#555;font-weight:bold;">
+        点击右上角 <span style="display:inline-block;background:#eee;padding:2px 8px;border-radius:5px;font-size:16px;">⋯</span><br>
+        选择「<b>发送给朋友</b>」
+      </div>
+    </div>
+    <button class="share-close" onclick="closeShare()">知道啦 ✨</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  人民币购物 · 手机版
+// ============================================================
+
+function closeShare(){document.getElementById('shareOverlay').classList.remove('show')}
+function showShare(){document.getElementById('shareOverlay').classList.add('show')}
+
+// ---- 商品数据 ----
+const products=[
+  {id:1,name:'铅笔',price:85,emoji:'✏️'},
+  {id:2,name:'橡皮擦',price:120,emoji:'🧽'},
+  {id:3,name:'笔记本',price:350,emoji:'📓'},
+  {id:4,name:'水彩笔',price:1000,emoji:'🖍️'},
+  {id:5,name:'玩具车',price:1500,emoji:'🚗'},
+  {id:6,name:'尺子',price:150,emoji:'📏'},
+  {id:7,name:'卷笔刀',price:260,emoji:'🔄'},
+  {id:8,name:'彩纸',price:75,emoji:'📄'},
+  {id:9,name:'剪刀',price:150,emoji:'✂️'},
+  {id:10,name:'书包',price:1280,emoji:'🎒'}
+];
+
+// ---- 图片路径 ----
+const IMG_BASE='images/';
+
+// ---- 人民币数据 ----
+const moneyData=[
+  // 纸币
+  {value:10000,label:'100元',isCoin:false,file:'100yuan.jpg'},
+  {value:5000,label:'50元',isCoin:false,file:'50yuan.jpg'},
+  {value:2000,label:'20元',isCoin:false,file:'20yuan.jpg'},
+  {value:1000,label:'10元',isCoin:false,file:'10yuan.jpg'},
+  {value:500,label:'5元',isCoin:false,file:'5yuan.jpg'},
+  {value:200,label:'2元',isCoin:false,file:'2yuan.jpg'},
+  {value:100,label:'1元',isCoin:false,file:'1yuan.jpg'},
+  {value:50,label:'5角',isCoin:false,file:'5jiao.jpg'},
+  {value:20,label:'2角',isCoin:false,file:'2jiao.jpg'},
+  {value:10,label:'1角',isCoin:false,file:'1jiao.jpg'},
+  // 硬币
+  {value:100,label:'1元硬币',isCoin:true,file:'1yuan_coin.jpg'},
+  {value:50,label:'5角硬币',isCoin:true,file:'5jiao_coin.jpg'},
+  {value:10,label:'1角硬币',isCoin:true,file:'1jiao_coin.jpg'},
+  {value:5,label:'5分',isCoin:true,file:'5fen_coin.jpg'},
+  {value:2,label:'2分',isCoin:true,file:'2fen_coin.jpg'},
+  {value:1,label:'1分',isCoin:true,file:'1fen_coin.jpg'}
+];
+
+// ---- 状态 ----
+let currentMethod='exact';
+let cart=[];
+let exactPayItems=[];
+let changePaidItems=[];
+let changeGiveItems=[];
+let selectedMoneyData=null;
+
+const $=id=>document.getElementById(id);
+const productGrid=$('productGrid');
+const cartContainer=$('cartContainer');
+const cartTotalDisplay=$('cartTotalDisplay');
+const clearCartBtn=$('clearCartBtn');
+const methodBtns=document.querySelectorAll('.method-btn');
+const exactPayArea=$('exactPayArea');
+const changePayArea=$('changePayArea');
+const exactPayDropZone=$('exactPayDropZone');
+const exactPayTotalDisplay=$('exactPayTotalDisplay');
+const checkExactPayBtn=$('checkExactPayBtn');
+const changePaidDropZone=$('changePaidDropZone');
+const changeGiveDropZone=$('changeGiveDropZone');
+const changePaidTotal=$('changePaidTotal');
+const changeGiveTotal=$('changeGiveTotal');
+const checkChangeBtn=$('checkChangeBtn');
+const feedbackEl=$('feedbackMessage');
+const moneyContainer=$('moneyContainer');
+
+// ---- 烟花 ----
+const fwCanvas=$('fireworksCanvas');
+const fwCtx=fwCanvas.getContext('2d');
+let particles=[],animFrame=null;
+function resizeFW(){fwCanvas.width=window.innerWidth;fwCanvas.height=window.innerHeight}
+resizeFW();window.addEventListener('resize',resizeFW);
+
+function startFireworks(){
+  if(animFrame)cancelAnimationFrame(animFrame);
+  particles=[];
+  for(let i=0;i<80;i++)particles.push({
+    x:fwCanvas.width/2,y:fwCanvas.height/2,
+    vx:(Math.random()-0.5)*12,vy:(Math.random()-0.8)*12,
+    size:Math.random()*6+3,color:`hsl(${Math.random()*360},80%,60%)`,
+    alpha:1,life:1
+  });
+  function draw(){
+    fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height);
+    particles.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.vy+=0.15;p.life-=0.01;p.alpha=p.life;
+      if(p.life<=0)return;
+      fwCtx.globalAlpha=p.alpha;
+      fwCtx.fillStyle=p.color;
+      fwCtx.beginPath();fwCtx.arc(p.x,p.y,p.size,0,Math.PI*2);fwCtx.fill();
+    });
+    fwCtx.globalAlpha=1;
+    particles=particles.filter(p=>p.life>0);
+    if(particles.length)animFrame=requestAnimationFrame(draw);
+    else{cancelAnimationFrame(animFrame);animFrame=null;fwCtx.clearRect(0,0,fwCanvas.width,fwCanvas.height)}
+  }
+  draw();
+}
+
+// ---- 音效 ----
+let audioCtx=null;
+function initAudio(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)()}
+function playSound(type){
+  try{
+    initAudio();if(audioCtx.state==='suspended')audioCtx.resume();
+    const osc=audioCtx.createOscillator();const gain=audioCtx.createGain();
+    osc.connect(gain);gain.connect(audioCtx.destination);const now=audioCtx.currentTime;
+    if(type==='correct'){
+      osc.frequency.setValueAtTime(880,now);osc.frequency.linearRampToValueAtTime(1320,now+0.15);
+      gain.gain.setValueAtTime(0.2,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.2);
+    }else{
+      osc.frequency.setValueAtTime(440,now);osc.frequency.linearRampToValueAtTime(330,now+0.15);
+      gain.gain.setValueAtTime(0.2,now);gain.gain.exponentialRampToValueAtTime(0.01,now+0.2);
+    }
+    osc.start();osc.stop(now+0.2);
+  }catch(e){}
+}
+
+// ---- 工具函数 ----
+function formatFen(fen){
+  const yuan=Math.floor(fen/100);
+  const jiao=Math.floor((fen%100)/10);
+  const fenRem=fen%10;
+  let r='￥';
+  if(yuan>0)r+=yuan+'元';
+  if(jiao>0||yuan===0)r+=jiao+'角';
+  if(fenRem>0||(yuan===0&&jiao===0))r+=fenRem+'分';
+  if(yuan===0&&jiao===0&&fenRem===0)r='￥0元0角0分';
+  return r;
+}
+function cartTotal(){return cart.reduce((s,i)=>s+i.price,0)}
+
+// ---- 渲染商品 ----
+function renderProducts(){
+  productGrid.innerHTML='';
+  products.forEach(p=>{
+    const card=document.createElement('div');
+    card.className='prod-card';
+    card.innerHTML=`<span class="prod-emoji">${p.emoji}</span><div class="prod-name">${p.name}</div><div class="prod-price">${formatFen(p.price)}</div>`;
+    card.addEventListener('click',()=>addToCart(p));
+    productGrid.appendChild(card);
+  });
+}
+
+// ---- 购物车 ----
+function updateCart(){
+  if(cart.length===0)cartContainer.innerHTML='🛒 空空如也，点商品添加';
+  else{
+    cartContainer.innerHTML='';
+    cart.forEach(item=>{
+      const div=document.createElement('div');div.className='cart-item';
+      div.innerHTML=`<span>${item.emoji} ${item.name}</span><span>${formatFen(item.price)}</span>`;
+      cartContainer.appendChild(div);
+    });
+  }
+  cartTotalDisplay.textContent=formatFen(cartTotal());
+}
+function addToCart(p){cart.push({...p});updateCart();feedbackEl.textContent='🛍️ 已添加 '+p.name}
+function clearCart(){cart=[];updateCart();feedbackEl.textContent='🧹 购物车已清空';clearSelectedMoney()}
+
+// ---- 选中钱币 ----
+function clearSelectedMoney(){
+  if(selectedMoneyData){
+    document.querySelectorAll('.money-item.selected').forEach(el=>el.classList.remove('selected'));
+    selectedMoneyData=null;
+  }
+}
+
+// ---- 渲染钱币（使用真实图片）----
+function renderMoney(){
+  moneyContainer.innerHTML='';
+  moneyData.forEach(m=>{
+    const item=document.createElement('div');
+    item.className='money-item'+(m.isCoin?' coin-style':'');
+    
+    const img=document.createElement('img');
+    img.className='money-img';
+    img.src=IMG_BASE+m.file;
+    img.alt=m.label;
+    img.draggable=false;
+    
+    const label=document.createElement('div');
+    label.className='money-label';
+    label.textContent=m.label;
+    
+    item.appendChild(img);
+    item.appendChild(label);
+    
+    item.addEventListener('click',(e)=>{
+      e.stopPropagation();
+      clearSelectedMoney();
+      item.classList.add('selected');
+      selectedMoneyData={value:m.value,label:m.label,isCoin:m.isCoin,file:m.file};
+    });
+    
+    moneyContainer.appendChild(item);
+  });
+}
+
+// ---- 创建付款区缩略图（使用真实图片）----
+function createThumb(data,index,zoneType){
+  const div=document.createElement('div');
+  div.className='money-thumb'+(data.isCoin?' coin-thumb':'');
+  div.dataset.index=index;
+  div.dataset.zone=zoneType;
+  
+  const img=document.createElement('img');
+  img.className='thumb-img';
+  img.src=IMG_BASE+data.file;
+  img.alt=data.label;
+  img.draggable=false;
+  div.appendChild(img);
+  
+  // 添加删除按钮 (X)
+  const x=document.createElement('span');
+  x.className='remove-x';x.textContent='×';
+  x.addEventListener('click',(e)=>{
+    e.stopPropagation();
+    removeFromZone(zoneType,index);
+  });
+  div.appendChild(x);
+  
+  // 点击删除
+  div.addEventListener('click',(e)=>{
+    if(e.target===x||e.target.closest('.thumb-img'))return;
+    removeFromZone(zoneType,index);
+  });
+  
+  return div;
+}
+
+function removeFromZone(zoneType,index){
+  if(zoneType==='exact'){exactPayItems.splice(index,1);renderExactZone()}
+  else if(zoneType==='paid'){changePaidItems.splice(index,1);renderChangeZones()}
+  else if(zoneType==='give'){changeGiveItems.splice(index,1);renderChangeZones()}
+}
+
+// ---- 渲染付款区 ----
+function renderExactZone(){
+  exactPayDropZone.innerHTML='';
+  let total=0;
+  exactPayItems.forEach((item,idx)=>{
+    exactPayDropZone.appendChild(createThumb(item,idx,'exact'));
+    total+=item.value;
+  });
+  exactPayTotalDisplay.textContent=formatFen(total);
+}
+
+function renderChangeZones(){
+  changePaidDropZone.innerHTML='';let pt=0;
+  changePaidItems.forEach((item,idx)=>{changePaidDropZone.appendChild(createThumb(item,idx,'paid'));pt+=item.value});
+  changePaidTotal.textContent=formatFen(pt);
+  changeGiveDropZone.innerHTML='';let gt=0;
+  changeGiveItems.forEach((item,idx)=>{changeGiveDropZone.appendChild(createThumb(item,idx,'give'));gt+=item.value});
+  changeGiveTotal.textContent=formatFen(gt);
+}
+
+// ---- 点击放置到付款区 ----
+function setupTapZone(zone,itemsArray,renderFn){
+  zone.addEventListener('click',(e)=>{
+    if(e.target.closest('.money-thumb'))return;
+    if(!selectedMoneyData){feedbackEl.textContent='👆 先点击选一种钱币吧！';return}
+    itemsArray.push({...selectedMoneyData});
+    clearSelectedMoney();
+    renderFn();
+    feedbackEl.textContent='✅ 已放入，继续或点×移除';
+  });
+}
+
+// ---- 检查付款 ----
+function checkExactPayment(){
+  const paid=exactPayItems.reduce((s,i)=>s+i.value,0);
+  const target=cartTotal();
+  if(target===0){feedbackEl.textContent='🧺 购物车是空的！先加购商品吧';return}
+  if(paid===target){
+    feedbackEl.textContent='🎉 太棒了！付款刚刚好！🎉';
+    playSound('correct');startFireworks();
+  }else{
+    playSound('wrong');
+    if(paid<target)feedbackEl.textContent='😕 钱不够哦，再放一些吧';
+    else feedbackEl.textContent='😮 钱多啦，点击钱币上的×移除一些吧';
+  }
+}
+
+function checkChangePayment(){
+  const target=cartTotal();
+  if(target===0){feedbackEl.textContent='🧺 购物车是空的！';return}
+  const paid=changePaidItems.reduce((s,i)=>s+i.value,0);
+  if(paid<target){playSound('wrong');feedbackEl.textContent='🧐 付的钱还不够商品价格';return}
+  const give=changeGiveItems.reduce((s,i)=>s+i.value,0);
+  const due=paid-target;
+  if(give===due){
+    feedbackEl.textContent='🎉 找零完全正确！好厉害！🎉';
+    playSound('correct');startFireworks();
+  }else{
+    playSound('wrong');
+    if(give<due)feedbackEl.textContent='🧐 找零少了，再放一些吧';
+    else feedbackEl.textContent='🤔 找零多了，点击×移除一些吧';
+  }
+}
+
+// ---- 切换付款方式 ----
+function setMethod(method){
+  currentMethod=method;
+  methodBtns.forEach(b=>b.classList.toggle('active',b.dataset.method===method));
+  exactPayArea.style.display=method==='exact'?'block':'none';
+  changePayArea.style.display=method==='change'?'block':'none';
+  clearSelectedMoney();
+}
+
+// ---- 初始化 ----
+function init(){
+  renderProducts();
+  renderMoney();
+  updateCart();
+  
+  setupTapZone(exactPayDropZone,exactPayItems,renderExactZone);
+  setupTapZone(changePaidDropZone,changePaidItems,renderChangeZones);
+  setupTapZone(changeGiveDropZone,changeGiveItems,renderChangeZones);
+  
+  clearCartBtn.addEventListener('click',clearCart);
+  checkExactPayBtn.addEventListener('click',checkExactPayment);
+  checkChangeBtn.addEventListener('click',checkChangePayment);
+  methodBtns.forEach(b=>b.addEventListener('click',()=>setMethod(b.dataset.method)));
+  
+  document.addEventListener('click',(e)=>{
+    if(!e.target.closest('.money-item')&&!e.target.closest('.money-thumb'))clearSelectedMoney();
+  });
+  
+  setMethod('exact');
+}
+
+init();
+
+// ---- 微信分享配置 ----
+(function(){
+  if(typeof wx!=='undefined'){
+    // 如有微信JS-SDK配置，取消注释下方并填入真实签名
+    // wx.config({
+    //   debug:false,
+    //   appId:'your_app_id',
+    //   timestamp:'your_timestamp',
+    //   nonceStr:'your_nonce',
+    //   signature:'your_signature',
+    //   jsApiList:['updateAppMessageShareData','updateTimelineShareData']
+    // });
+    // wx.ready(function(){
+    //   wx.updateAppMessageShareData({
+    //     title:'🧸 逛超市购物付钱小达人 · 认识人民币',
+    //     desc:'和小朋友一起学认人民币，购物付钱真好玩！',
+    //     link:location.href,
+    //     imgUrl:location.origin+'/share-icon.jpg',
+    //     success:function(){}
+    //   });
+    //   wx.updateTimelineShareData({
+    //     title:'🧸 逛超市购物付钱小达人 · 认识人民币',
+    //     link:location.href,
+    //     imgUrl:location.origin+'/share-icon.jpg'
+    //   });
+    // });
+  }
+})();
+
+console.log('🧸 人民币购物小游戏已加载！');
+console.log('💡 玩法：点商品→选钱币→点付款区→检查');
+</script>
+</body>
+</html>
